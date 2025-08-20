@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>แผนที่ลูกค้าหาย MT-51</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <style>
+    :root{ --brand:#1666d6; --brand-2:#0f4fb0; --bg:#f6f8fb; --text:#111827; --muted:#6b7280; --card:#ffffff; }
+    html,body{height:100%;margin:0;background:var(--bg);color:var(--text);} *{box-sizing:border-box;}
+
+    .appbar{position:sticky;top:0;z-index:1001;background:linear-gradient(120deg,var(--brand),var(--brand-2));color:#fff;box-shadow:0 6px 18px rgba(0,0,0,.15)}
+    .appbar-inner{max-width:1180px;margin:0 auto;padding:16px 20px 14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+    .title{font:800 18px/1.2 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial}
+    .subtitle{color:#e8f0ff;font:600 13px/1.2 ui-sans-serif,system-ui;opacity:.9;border-left:1px solid rgba(255,255,255,.35);padding-left:12px;margin-left:4px}
+    .badge{margin-left:auto;background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.35);padding:6px 10px;border-radius:999px;font:700 12px/1 ui-sans-serif,system-ui;text-transform:uppercase;letter-spacing:.6px}
+
+    #map{height:calc(100vh - 62px);width:100vw}
+
+    .panel{position:absolute;z-index:1000;right:16px;top:86px;width:300px;background:var(--card);border:1px solid rgba(0,0,0,.06);border-radius:14px;box-shadow:0 16px 36px rgba(0,0,0,.14);padding:14px 16px;font:500 14px/1.5 ui-sans-serif,system-ui}
+    .panel b{color:var(--brand-2)} .panel small{color:var(--muted);display:block;margin-top:6px}
+
+    .fit-btn{position:absolute;z-index:1000;right:16px;top:248px;background:#fff;border:1px solid rgba(0,0,0,.08);padding:10px 12px;border-radius:10px;cursor:pointer;box-shadow:0 10px 22px rgba(0,0,0,.10);font:700 13px/1 ui-sans-serif,system-ui}
+    .fit-btn:hover{background:#eef4ff;border-color:#c8dbff}
+
+    .leaflet-popup-content{margin:10px 12px;font:500 14px/1.5 ui-sans-serif,system-ui;color:var(--text)}
+    .popup-title{font-weight:800;margin-bottom:6px;color:var(--brand-2)}
+    .popup-meta{color:var(--muted);margin-bottom:8px}
+    .popup-link{display:inline-block;font-weight:800;color:var(--brand-2);text-decoration:underline}
+    .leaflet-control-scale-line{border-color:#c7d2fe;color:#334155}
+
+    .pin-wrap{position:relative;transform:translate(-50%,-100%)} /* anchor at tip */
+  </style>
+</head>
+<body>
+  <header class="appbar">
+    <div class="appbar-inner">
+      <div class="title">แผนที่ลูกค้าด้านขายของ MT-51</div>
+      <div class="subtitle">ภาคอีสาน · พิกัดจาก Google Maps · คลิกเพื่อเปิดนำทาง</div>
+      <div class="badge">Live Map</div>
+    </div>
+  </header>
+
+  <div id="map"></div>
+
+  <div class="panel">
+    <b>วิธีใช้</b> — คลิกหมุดเพื่อดูรายละเอียด แล้วเลือก <b>Open in Google Maps</b>
+    <small>ทิป: กด <b>Ctrl</b> + คลิก เพื่อเปิดหลายแท็บ, ปุ่ม “แสดงทุกจุด” จะซูมให้เห็นทุกหมุด</small>
+  </div>
+  <button class="fit-btn" id="fitAll">แสดงทุกจุด</button>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <script>
+    /* ---------- Data ---------- */
+    const points = [
+      { no: 1,  url: "https://www.google.com/maps?q=16.221314,104.972755", lat: 16.22128307932057, lng: 104.97275499565613 },
+      { no: 2,  url: "https://www.google.com/maps?q=16.175809,104.956742", lat: 16.17580189181967, lng: 104.95674508464808 },
+      { no: 3,  url: "https://www.google.com/maps/place/16%C2%B008'24.1%22N+104%C2%B055'26.1%22E/@16.139994,104.9238005,58m/data=!3m1!1e3!4m4!3m3!8m2!3d16.140016!4d104.923923?entry=ttu&g_ep=EgoyMDI1MDgxMy4wIKXMDSoASAFQAw%3D%3D", lat: 16.140012003098686, lng: 104.92393931609703 },
+      { no: 4,  url: "https://www.google.com/maps/place/16%C2%B005'25.6%22N+104%C2%B055'40.1%22E/@16.0902983,104.9276861,58m/data=!3m1!1e3!4m4!3m3!8m2!3d16.090437!4d104.927809?entry=ttu&g_ep=EgoyMDI1MDgxMy4wIKXMDSoASAFQAw%3D%3D", lat: 16.090436783223776, lng: 104.92783427100454 },
+      { no: 5,  url: "https://www.google.com/maps?q=16.016835,104.898493", lat: 16.016818440303048, lng: 104.89848746791084 },
+      { no: 6,  url: "https://www.google.com/maps?q=16.047233,104.833914", lat: 16.04722216129569, lng: 104.83390572530566 },
+      { no: 7,  url: "https://www.google.com/maps?q=16.058904,104.847833", lat: 16.058897450447592, lng: 104.8478346195027 },
+      { no: 8,  url: "https://www.google.com/maps?q=16.022545,104.796012", lat: 16.022528311456444, lng: 104.7960100070931 },
+      { no: 9,  url: "https://www.google.com/maps?q=16.014999,104.780501", lat: 16.01492858026586, lng: 104.78051213890322 },
+      { no: 10, url: "https://www.google.com/maps?q=16.076515,104.600816", lat: 16.0765125571633, lng: 104.60081865559366 },
+      { no: 11, url: "https://www.google.com/maps?q=16.034213,104.575341", lat: 16.03420453775591, lng: 104.57533989226646 },
+      { no: 12, url: "https://www.google.com/maps?q=16.385214,104.660938", lat: 16.385247830819463, lng: 104.66093603887093 },
+      { no: 13, url: "https://www.google.com/maps?q=16.384174,104.723155", lat: 16.384171780797146, lng: 104.72315866796964 },
+      { no: 14, url: "https://www.google.com/maps?q=16.381169,104.733943", lat: 16.381173471528268, lng: 104.73393184496477 },
+      { no: 15, url: "https://www.google.com/maps?q=16.334868,104.808394", lat: 16.334924611050145, lng: 104.80838326683195 },
+      { no: 16, url: "https://www.google.com/maps?q=16.248068,104.809588", lat: 16.248057684138796, lng: 104.80959336008334 },
+      { no: 17, url: "https://www.google.com/maps?q=16.227147,104.730638", lat: 16.22710062810729,  lng: 104.73063799566519 },
+    ];
+
+    /* ---------- Map ---------- */
+    const map = L.map('map', { center:[16.2,104.8], zoom:10, zoomControl:true });
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom:19, attribution:'&copy; OpenStreetMap contributors' }).addTo(map);
+    L.control.scale({metric:true,imperial:false}).addTo(map);
+
+    /* ---------- Small pretty pin (SVG 32x44) ---------- */
+    const pinSVG = (num, color='#1666d6', halo='#ffffff') => `
+      <svg width="32" height="44" viewBox="0 0 42 56" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="shadow" x="-20%" y="-10%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="${color}" flood-opacity="0.35"/>
+          </filter>
+        </defs>
+        <path filter="url(#shadow)" d="M21 0 C9.4 0 0 9.4 0 21 c0 11.6 9.4 17.5 21 35 C32.6 38.5 42 32.6 42 21 C42 9.4 32.6 0 21 0z" fill="${color}"/>
+        <circle cx="21" cy="21" r="10" fill="${halo}"/>
+        <text x="21" y="25" text-anchor="middle" font-family="ui-sans-serif,system-ui,Roboto,Arial" font-weight="800" font-size="12" fill="${color}">${num}</text>
+      </svg>`;
+
+    const pinIcon = (num) => L.divIcon({
+      className: 'pin-wrap',
+      html: pinSVG(num),
+      iconSize: [32, 44],
+      iconAnchor: [16, 44],   // ยึดที่ปลายหมุด
+      popupAnchor: [0, -40],
+      tooltipAnchor: [0, -28],
+    });
+
+    const bounds = [];
+    const fmt = (x)=>Number(x).toFixed(6);
+
+    points.forEach(p => {
+      if (isNaN(p.lat) || isNaN(p.lng)) return;
+
+      const marker = L.marker([p.lat, p.lng], { icon: pinIcon(p.no), title:`Pin #${p.no}` }).addTo(map);
+      marker.bindTooltip(`#${p.no}`, { direction:'top', offset:[0,-30] });
+
+      const html = `
+        <div class="popup">
+          <div class="popup-title">Pin #${p.no}</div>
+          <div class="popup-meta">Lat: ${fmt(p.lat)}<br>Lng: ${fmt(p.lng)}</div>
+          <a class="popup-link" href="${p.url}" target="_blank" rel="noopener">Open in Google Maps</a>
+        </div>`;
+      marker.bindPopup(html, { keepInView:true, autoPanPaddingTopLeft:[40,40], autoPanPaddingBottomRight:[40,40] });
+      bounds.push([p.lat, p.lng]);
+    });
+
+    if (bounds.length) map.fitBounds(bounds, { padding:[30,30] });
+
+    document.getElementById('fitAll').addEventListener('click', ()=>{
+      if (bounds.length) map.fitBounds(bounds, { padding:[30,30] });
+    });
+
+    map.on('popupopen', e => map.panTo(e.popup.getLatLng(), { animate:true, duration:.35 }));
+  </script>
+</body>
+</html>
